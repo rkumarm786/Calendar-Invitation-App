@@ -2,6 +2,7 @@ package com.example.calendly.controller;
 
 import com.example.calendly.dto.EventDto;
 import com.example.calendly.service.EventService;
+import com.example.calendly.utils.SessionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;

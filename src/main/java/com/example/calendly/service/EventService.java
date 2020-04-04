@@ -106,12 +106,11 @@ public class EventService {
         events.sort(new Comparator<Event>() {
             @Override
             public int compare(Event o1, Event o2) {
-                if (o1.getLastModifiedDate() == null && o2.getLastModifiedDate() == null) {
+                if(o1.getLastModifiedDate()==null && o2.getLastModifiedDate()==null){
                     return o2.getCreationDate().compareTo(o1.getCreationDate());
-                }
-                if (o2.getLastModifiedDate() == null) {
+                }if(o2.getLastModifiedDate()==null){
                     return 1;
-                } else {
+                }else {
                     return -1;
                 }
             }
@@ -144,11 +143,11 @@ public class EventService {
 
         Event event = OptionalEvent.get();
 
-        Map<String, List<CustomDateTime.Interval>> customAvailabilityDay = event.getEventDateMappings().isEmpty() ? new HashMap<>() : event.getEventDateMappings().stream().filter(eventDateMapping -> eventDateMapping.getType().equals(EventTypeEnum.DAY)).collect(Collectors.toMap(e -> e.getDay().name(), e -> e.getEventTimeMappings().stream().filter(EventTimeMapping::isAvailable).map(t -> {
+        Map<String, List<CustomDateTime.Interval>> customAvailabilityDay = event.getEventDateMappings().isEmpty()?new HashMap<>():event.getEventDateMappings().stream().filter(eventDateMapping -> eventDateMapping.getType().equals(EventTypeEnum.DAY)).collect(Collectors.toMap(e -> e.getDay().name(), e -> e.getEventTimeMappings().stream().filter(EventTimeMapping::isAvailable).map(t -> {
             return CustomDateTime.Interval.builder().from(t.getFrom_time()).to(t.getTo_time()).build();
         }).collect(Collectors.toList())));
 
-        Map<Long, List<CustomDateTime.Interval>> customAvailabilityDate = event.getEventDateMappings().isEmpty() ? new HashMap<>() : event.getEventDateMappings().stream().filter(eventDateMapping -> eventDateMapping.getType().equals(EventTypeEnum.DATE)).collect(Collectors.toMap(EventDateMapping::getTimeStamp, e -> e.getEventTimeMappings().stream().filter(EventTimeMapping::isAvailable).map(t -> {
+        Map<Long, List<CustomDateTime.Interval>> customAvailabilityDate = event.getEventDateMappings().isEmpty()?new HashMap<>():event.getEventDateMappings().stream().filter(eventDateMapping -> eventDateMapping.getType().equals(EventTypeEnum.DATE)).collect(Collectors.toMap(EventDateMapping::getTimeStamp, e -> e.getEventTimeMappings().stream().filter(EventTimeMapping::isAvailable).map(t -> {
             return CustomDateTime.Interval.builder().from(t.getFrom_time()).to(t.getTo_time()).build();
         }).collect(Collectors.toList())));
 
@@ -187,12 +186,12 @@ public class EventService {
 
         Event event = optionalEvent.get();
 
-        if (!((scheduleCreationDto.getDate() + 86400000 >= event.getFromDate()) && (scheduleCreationDto.getFromTime() < scheduleCreationDto.getToTime()))) {
+        if(!((scheduleCreationDto.getDate()+86400000>=event.getFromDate()) && (scheduleCreationDto.getFromTime()<scheduleCreationDto.getToTime()))){
             throw new RuntimeException("Please provide valid date and time for meeting");
         }
 
         //validate schedule data
-        validateScheduleCreationDto(scheduleCreationDto, event.getEventDateMappings(), event.getInterval());
+        validateScheduleCreationDto(scheduleCreationDto, event.getEventDateMappings(),event.getInterval());
 
         EventSchedule eventSchedule = EventSchedule.builder()
                 .from_time(scheduleCreationDto.getFromTime())
@@ -220,8 +219,8 @@ public class EventService {
 
         return GoogleCalenderDto.builder().summary(event.getTitle())
                 .description(event.getDescription())
-                .startTime(scheduleCreationDto.getDate() + scheduleCreationDto.getFromTime() * 60000)
-                .endTime(scheduleCreationDto.getDate() + scheduleCreationDto.getToTime() * 60000)
+                .startTime(scheduleCreationDto.getDate()+scheduleCreationDto.getFromTime()*60000)
+                .endTime(scheduleCreationDto.getDate()+scheduleCreationDto.getToTime()*60000)
                 .location("")
                 .timeZone("Asia/Kolkata")
                 .attendees(attendees)
@@ -235,24 +234,24 @@ public class EventService {
         EventDateMapping eventDayMap = null;
         EventDateMapping eventDateMap = null;
 
-        for (EventDateMapping eventDateMapping : eventDateMappings) {
-            if (eventDateMapping.getDay().equals(dayOfWeek)) {
+        for(EventDateMapping eventDateMapping : eventDateMappings){
+            if(eventDateMapping.getDay().equals(dayOfWeek)){
                 eventDayMap = eventDateMapping;
-            } else if (eventDateMapping.getDay().equals(scheduleCreationDto.getDate())) {
+            }else if(eventDateMapping.getDay().equals(scheduleCreationDto.getDate())){
                 eventDateMap = eventDateMapping;
             }
         }
 
         //if custom day is available
         boolean isDateTimeValid = false;
-        if (eventDayMap != null) {
+        if(eventDayMap!=null){
             isDateTimeValid = validateDateAndTimeSlot(scheduleCreationDto, interval, eventDayMap);
         }
-        if (eventDateMap != null) {
+        if(eventDateMap!=null){
             isDateTimeValid = validateDateAndTimeSlot(scheduleCreationDto, interval, eventDateMap);
         }
 
-        if (!isDateTimeValid) {
+        if(!isDateTimeValid){
             throw new RuntimeException("Date or Time slots are not available");
         }
     }
@@ -261,27 +260,27 @@ public class EventService {
         boolean isValidTime = true;
         boolean isValidDate = true;
         List<EventTimeMapping> eventTimeMappings = eventDayMap.getEventTimeMappings();
-        if (!eventTimeMappings.isEmpty()) {
+        if(!eventTimeMappings.isEmpty()){
             Set<Integer> timeSlot = new HashSet<>();
-            for (EventTimeMapping eventTimeMapping : eventTimeMappings) {
+            for(EventTimeMapping eventTimeMapping : eventTimeMappings){
                 timeSlot.add(eventTimeMapping.getFrom_time());
-                int start = eventTimeMapping.getFrom_time() + interval;
-                while (start < eventTimeMapping.getTo_time()) {
+                int start = eventTimeMapping.getFrom_time()+interval;
+                while (start<eventTimeMapping.getTo_time()){
                     timeSlot.add(start);
-                    start += interval;
+                    start+=interval;
                 }
             }
-            if (!timeSlot.contains(scheduleCreationDto.getFromTime()) || !timeSlot.contains(scheduleCreationDto.getToTime())) {
-                isValidTime = false;
+            if(!timeSlot.contains(scheduleCreationDto.getFromTime()) || !timeSlot.contains(scheduleCreationDto.getToTime())){
+                isValidTime=false;
             }
-        } else {
-            isValidDate = false;
+        }else {
+            isValidDate=false;
         }
-        return isValidDate && isValidTime;
+        return isValidDate&&isValidTime;
     }
 
     @Transactional
     public void eventUpdate(UserDto userDto, String url, Boolean action) {
-        eventRepository.updateEventByUrlAndAction(url, action, userDto.getId());
+        eventRepository.updateEventByUrlAndAction(url,action, userDto.getId());
     }
 }
