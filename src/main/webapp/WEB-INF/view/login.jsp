@@ -9,7 +9,7 @@
 
     <div id="v-app">
         <div class="mt-3">
-            <form id="" action="loginOAuth" name="login" spellcheck="false" class="m-auto text-center">
+            <form id="" action="login" name="login" spellcheck="false" class="m-auto text-center">
                 <span>
                     <strong>Please click on the button below to proceed for Authentication via Google</strong>
                 </span>
