@@ -108,3 +108,8 @@ Application to create a  Calendar schedule and share with someone to schedule a 
         "active": true
     }]
     ```
+
+## Improvement to be done
+
+- Timezone handling will help to improve share url in multiple regions (on user interface)
+- Cache can be implemented for fast processing of some apis
