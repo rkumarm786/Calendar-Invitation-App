@@ -19,4 +19,5 @@ public class GoogleCalenderDto {
     private Long endTime;
     private String timeZone;
     private List<String> attendees;
+    private String organizer;
 }

@@ -114,7 +114,7 @@
                       <th>${event.active ? "In Progress":"Completed"}</th>
                     </tr>
                     <tr>
-                       <th><button ${!event.active?'disabled':''} onclick="eventAction('${event.url}',${!event.live})">${event.live?"Pause":"Live"}</button></th>
+                       <th><button id="eventAction" ${!event.active?'disabled':''} onclick="eventAction('${event.url}',${!event.live})">${event.live?"Pause":"Live"}</button></th>
                        <th><button ${(!event.active || !event.live)?'disabled':''} onclick="getUrl('${event.url}')">Get Url</button></th>
                     </tr>
                 </table>
@@ -177,6 +177,7 @@
      }
 
      function eventAction(url,action){
+        $("#eventAction").prop("disabled",true);
         $.ajax({
             url: '/action/event',
             data: JSON.stringify({url:url,action:action}),
@@ -184,6 +185,7 @@
             contentType: "application/json;charset=utf-8",
             error: function(response) {
                 alert(response.responseJSON.details.join("\n"));
+                $("#eventAction").prop("disabled",false);
             },
             success: function(data) {
                 alert("event updated successfully");

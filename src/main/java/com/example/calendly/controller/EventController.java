@@ -25,7 +25,10 @@ public class EventController {
     private SessionUtil sessionUtil;
 
     @RequestMapping("/")
-    String loginPage() {
+    String loginPage(HttpServletRequest request) {
+        if (sessionUtil.isLoggedIn(request)) {
+            return "redirect:/home";
+        }
         return "login";
     }
 

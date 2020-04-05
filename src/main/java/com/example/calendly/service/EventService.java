@@ -224,6 +224,7 @@ public class EventService {
                 .location("")
                 .timeZone("Asia/Kolkata")
                 .attendees(attendees)
+                .organizer(event.getUser().getEmail())
                 .build();
     }
 
@@ -265,7 +266,7 @@ public class EventService {
             for(EventTimeMapping eventTimeMapping : eventTimeMappings){
                 timeSlot.add(eventTimeMapping.getFrom_time());
                 int start = eventTimeMapping.getFrom_time()+interval;
-                while (start<eventTimeMapping.getTo_time()){
+                while (start<=eventTimeMapping.getTo_time()){
                     timeSlot.add(start);
                     start+=interval;
                 }

@@ -9,6 +9,7 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.*;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -23,10 +24,7 @@ import com.google.api.services.calendar.model.EventReminder;
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -147,11 +145,14 @@ public class CalenderService {
         return event;
     }
 
-    private String getUpdatedToken(String refreshToken) {
+    private String getUpdatedToken(String tokenString) {
+        Map<String,String> map = gson.fromJson(tokenString, Map.class);
+
         MultiValueMap<String, String> postData = new LinkedMultiValueMap<String, String>();
+
         postData.add("client_id", clientId);
         postData.add("client_secret", clientSecret);
-        postData.add("refresh_token", refreshToken);
+        postData.add("refresh_token", map.get("refresh_token"));
         postData.add("grant_type", "refresh_token");
 
         HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
@@ -161,39 +162,51 @@ public class CalenderService {
 
         String url = "https://oauth2.googleapis.com/token";
         ResponseEntity<String> stringResponseEntity = restTemplate.postForEntity(url, new HttpEntity<>(postData, headers), String.class);
-        System.out.println(stringResponseEntity);
-        return "";
+        if(stringResponseEntity.getStatusCode().equals(HttpStatus.OK)){
+            Map newTokenStringMap = gson.fromJson(stringResponseEntity.getBody(), Map.class);
+            map.put("access_token",newTokenStringMap.get("access_token").toString());
+            map.put("id_token",newTokenStringMap.get("id_token").toString());
+            String updateTokenString = gson.toJson(map);
+            return updateTokenString;
+        }
+        throw new RuntimeException("exception while requesting token");
     }
 
     public void scheduleCalenderEvent(GoogleCalenderDto googleCalenderDto, String tokenString) {
         try {
-            Map<String,String> map = gson.fromJson(tokenString, Map.class);
-            TokenResponse tokenResponse = new TokenResponse()
-                    .setAccessToken(map.get("access_token"))
-                    .setScope(map.get("scope"))
-                    .setTokenType(map.get("token_type"));
-            Credential credential = createAuthorizationCodeFlow().createAndStoreCredential(tokenResponse, "userID");
-            Calendar client = new Calendar.Builder(httpTransport, JSON_FACTORY, credential)
-                    .setApplicationName(APPLICATION_NAME).build();
+            Calendar client = getCalendarClient(tokenString);
             Event event = createGoogleCalenderEvent(googleCalenderDto);
             String calendarId = "primary";
-            event = client.events().insert(calendarId, event).execute();
+            try {
+                client.events().insert(calendarId, event).execute();
+            }catch (GoogleJsonResponseException ex){
+                System.out.println("google auth token expired for dto "+googleCalenderDto.toString());
+                if(ex.getStatusCode()==401){
+                    String updatedToken = getUpdatedToken(tokenString);
+                    userService.updateUserToken(updatedToken, googleCalenderDto.getOrganizer());
+                    client = getCalendarClient(updatedToken);
+                    client.events().insert(calendarId, event).execute();
+                }
+            }
             System.out.println(event);
-        } catch (Exception e) {
+        }catch (Exception e) {
             e.printStackTrace();
-            System.out.println(e.getMessage());
+            throw new RuntimeException("error while sending calender invitation");
         }
     }
+
+    private Calendar getCalendarClient(String tokenString) throws Exception {
+        Map<String,String> map = gson.fromJson(tokenString, Map.class);
+        TokenResponse tokenResponse = new TokenResponse()
+                .setAccessToken(map.get("access_token"))
+                .setScope(map.get("scope"))
+                .setTokenType(map.get("token_type"));
+        Credential credential = createAuthorizationCodeFlow().createAndStoreCredential(tokenResponse, "userID");
+        return new Calendar.Builder(httpTransport, JSON_FACTORY, credential)
+                .setApplicationName(APPLICATION_NAME).build();
+    }
+
+    private void refreshAccessToken(TokenResponse tokenResponse) {
+
+    }
 }
-
-
-
-//    GoogleTokenResponse tokenResponse = new GoogleTokenResponse();
-//tokenResponse.setIdToken("eyJhbGciOiJSUzI1NiIsImtpZCI6IjI1N2Y2YTU4MjhkMWU0YTNhNmEwM2ZjZDFhMjQ2MWRiOTU5M2U2MjQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiMTA3ODE4MTM2NDI5Mi1tbWE2Nmx1bDVrYTJhOHQ1ZDhtbG5jMGxiNmo1dnBtci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsImF1ZCI6IjEwNzgxODEzNjQyOTItbW1hNjZsdWw1a2EyYTh0NWQ4bWxuYzBsYjZqNXZwbXIuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDA3ODk2NDk2NzkyNjY2ODQ4NTMiLCJoZCI6InRlY2hrcml0aS5vcmciLCJlbWFpbCI6InJhakB0ZWNoa3JpdGkub3JnIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJaZkhKQlYxcUhlMEI4OUdEYlZIaFZRIiwiaWF0IjoxNTg1OTk0NDk3LCJleHAiOjE1ODU5OTgwOTd9.hYr4ncEcRscCyibxED2cpePUYt6xuk59UPoNFNO84H42xkSr1NsgWWstFnkW8UQ_Q202xVpM2cP2GPWwwFvs2Tg9zieU740_wdJu6jh49f6reomrXOAPZfHjvi8DhIG5MxnBwi35ILfOZglPxetjN1Lfn7jWxpwd5cooPv1PSvKW0HbQMTeC_6pn5wUDnnEMyKZ5kButScjZEFafNTtAb2t7go7J8jT6UzHnl2gRIpHN76Q8pbDreJE2EfUtpkO_Siw7-Nd_uV896EfSZ7LtOpeA3_Hf36F8wzwSIrhNcVdvFZ3j4oasAnPx4J2SgV85UhCyZH9RvqSta1e6v_5kKw");
-//        tokenResponse.setAccessToken("ya29.a0Ae4lvC2Tq45nmCaWx9vwuYSYtbrnK896WhLrhermbfQeFx60Uqt3LDRgGs_FgjyTg5tV-VvPYQ01lwDMUzjLX1GANBCwISHbxevx0LrC0yuDJuO2xg1C5Dm8yYL9b_C33KkPgaGE0kSlOKd3PVHdoR5z2BHrIKEX_qw");
-//        tokenResponse.setExpiresInSeconds(3599L);
-//        tokenResponse.setScope("https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/calendar");
-//        tokenResponse.setTokenType("Bearer");
-//
-//        client = new com.google.api.services.calendar.Calendar.Builder(httpTransport, JSON_FACTORY, createAuthorizationCodeFlow().createAndStoreCredential(tokenResponse, "userID"))
-//        .setApplicationName(APPLICATION_NAME).build()

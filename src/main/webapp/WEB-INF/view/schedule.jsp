@@ -69,7 +69,7 @@
             <th><input type="email" id="email"></th>
           </tr>
           <tr>
-              <th colspan="2"><button onclick="scheduleSlot()">Schedule Meeting</button></th>
+              <th colspan="2"><button id="schdeduleMeeting" onclick="scheduleSlot()">Schedule Meeting</button></th>
           </tr>
       </table>
     </div>
@@ -91,6 +91,7 @@
               contentType: "application/json;charset=utf-8",
               error: function(response) {
                   alert(response.responseJSON.details.join("\n"));
+                  $("#schdeduleMeeting").prop("disabled",false);
               },
               success: function(data) {
                   scheduleData = data;
@@ -156,9 +157,11 @@
     }
 
     function scheduleSlot(){
+        $("#schdeduleMeeting").prop("disabled",true);
         let time = $("input[name='scheduleTime']:checked").val();
         if(!time){
           alert("Select time from given slots");
+          $("#schdeduleMeeting").prop("disabled",false);
           return;
         }
         let timeSec = parseInt(time.split(":")[0])*60+parseInt(time.split(":")[1]);
@@ -171,6 +174,7 @@
         
         if(!data["name"] || !data["email"] || !data["fromTime"] || !data["toTime"] ||!data["url"] ||!data["date"]){
             alert("please provide all details");
+             $("#schdeduleMeeting").prop("disabled",false);
             return;
         }
 
@@ -181,10 +185,10 @@
             contentType: "application/json;charset=utf-8",
             error: function(response) {
                 alert(response.responseJSON.details.join("\n"));
+                $("#schdeduleMeeting").prop("disabled",false);
             },
             success: function(data) {
-                alert("meeting scheduled successfully");
-                window.location.reload;
+                alert("meeting scheduled successfully. you can close this window now");
             }
         });
     }

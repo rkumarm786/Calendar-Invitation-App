@@ -31,4 +31,8 @@ public class UserService {
         }
         return userRepository.save(User.builder().token(token).email(email).isActive(true).build());
     }
+
+    public void updateUserToken(String updateTokenString, String email) {
+        userRepository.updateToken(updateTokenString, email);
+    }
 }
